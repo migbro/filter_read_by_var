@@ -21,7 +21,7 @@ args = docopt(__doc__)
 bam_file = pysam.AlignmentFile(args['<bam1>'], 'rb')
 vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
 i = 0
-reads = []
+reads = {}
 var_objs = []
 var_flag = {}
 for variant in vcf_file.fetch():
