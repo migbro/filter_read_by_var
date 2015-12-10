@@ -20,5 +20,5 @@ bam_file = pysam.AlignmentFile(args['<bam>'], 'rb')
 vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
 
 for variant in vcf_file.fetch():
-    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
+    for read in bam_file.fetch(variant.chrom, variant.pos):
         pdb.set_trace()
