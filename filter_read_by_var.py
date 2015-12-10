@@ -27,7 +27,7 @@ var_flag = {}
 for variant in vcf_file.fetch():
     var_objs.append(variant)
     var_flag[i] = 0
-    var = var.alts[2]
+    var = variant.alts[2]
     for read in bam_file.fetch(variant.chrom, variant.pos):
         pos = variant.pos - read.pos - 1
         if read.read.query_alignment_sequence[pos] == var:
