@@ -30,7 +30,7 @@ for variant in vcf_file.fetch():
     var = variant.alts[0]
     for read in bam_file.fetch(variant.chrom, variant.pos):
         pos = variant.pos - read.pos - 1
-        if read.read.query_alignment_sequence[pos] == var:
+        if read.query_alignment_sequence[pos] == var:
             reads[read.qname] = []
             reads[read.qname]['pos'] = pos
             reads[read.qname]['var'] = var
