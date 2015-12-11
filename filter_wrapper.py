@@ -13,6 +13,7 @@ Options:
 '''
 import pdb
 import sys
+import os
 from docopt import docopt
 sys.path.append('/home/ubuntu/TOOLS/Scripts/utility')
 from job_manager import job_manager
@@ -26,7 +27,7 @@ vcf_list = open(args['<vcf_list>'],'r')
 cmd_list = []
 for vcf in vcf_list:
     vcf = vcf.rstrip('\n')
-    parts = vcf.split('\.')
+    parts = os.path.basename(vcf).split('\.')
     out = parts[0] + '.hits.txt'
     cmd = ' '.join((filter_py, vcf, bam1, bam2, out))
     log_file = parts[0] + '.log'
