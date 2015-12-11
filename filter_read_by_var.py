@@ -59,22 +59,18 @@ vcf_file.close()
 
 mmu_bam = pysam.AlignmentFile(args['<bam2>'], 'rb')
 j = 1
-m = 10000000
+mod = 10000000
 for read in mmu_bam:
-    if j % m == 0:
+    if j % mod == 0:
         sys.stderr.write('At read ' + str(j) + ' in bam 2 file\n')
     j += 1
     try:
         # make same adjustment above for deletion
-        try:
-            cur_pos = reads[read.qname]['pos']
-            m = re.findall('(\d+\w)', read.cigarstring)
-            for cig in m:
-                if cig[-1] == 'D':
-                    cur_pos -= int(cig[:-1])
-        except:
-            sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
-            continue
+        cur_pos = reads[read.qname]['pos']
+        m = re.findall('(\d+\w)', read.cigarstring)
+        for cig in m:
+            if cig[-1] == 'D':
+                cur_pos -= int(cig[:-1])
         if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
             var_flag[reads[read.qname]['v_idx']] += 1
     except:
@@ -85,5 +81,5 @@ out = open(args['<out>'], 'w')
 for index in var_flag:
     if var_flag[index] > 0:
         out.write('\t'.join(
-                (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref, var_objs[index].alts[0])) + str(
+                (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref, var_objs[index].alts[0])) +'\t' +  str(
                 var_flag[index]) + '\n')
