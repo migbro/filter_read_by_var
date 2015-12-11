@@ -30,18 +30,18 @@ for variant in vcf_file.fetch():
     var_objs.append(variant)
     var_flag[i] = 0
     var = variant.alts[0]
-#    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
-    for read in bam_file.fetch(variant.chrom,variant.pos, (variant.pos + 1)):
+    #    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
+    for read in bam_file.fetch(variant.chrom, variant.pos, (variant.pos + 1)):
         pos = variant.pos - read.pos - 1
         if pos >= 0:
             try:
-                m = re.findall('(\d+\w)',read.cigarstring)
+                m = re.findall('(\d+\w)', read.cigarstring)
                 for cig in m:
                     if cig[-1] == 'D':
-                        pos -= int(cig[:-1])  
+                        pos -= int(cig[:-1])
             except:
                 pdb.set_trace()
-  
+
             try:
                 read.query_alignment_sequence[pos]
             except:
@@ -58,8 +58,8 @@ bam_file.close()
 vcf_file.close()
 
 mmu_bam = pysam.AlignmentFile(args['<bam2>'], 'rb')
-j=1
-m=10000000
+j = 1
+m = 10000000
 for read in mmu_bam:
     if j % m == 0:
         sys.stderr.write('At read ' + str(j) + ' in bam 2 file\n')
@@ -68,10 +68,13 @@ for read in mmu_bam:
         # make same adjustment above for deletion
         try:
             cur_pos = reads[read.qname]['pos']
-            m = re.findall('(\d+\w)',read.cigarstring)
+            m = re.findall('(\d+\w)', read.cigarstring)
             for cig in m:
                 if cig[-1] == 'D':
                     cur_pos -= int(cig[:-1])
+        except:
+            sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
+            continue
         if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
             var_flag[reads[read.qname]['v_idx']] += 1
     except:
