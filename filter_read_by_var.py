@@ -12,8 +12,9 @@ Options:
 -h
 
 '''
-
+import pdb
 import pysam
+import re
 from docopt import docopt
 
 args = docopt(__doc__)
@@ -28,14 +29,28 @@ for variant in vcf_file.fetch():
     var_objs.append(variant)
     var_flag[i] = 0
     var = variant.alts[0]
-    for read in bam_file.fetch(variant.chrom, variant.pos):
+#    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
+    for read in bam_file.fetch(variant.chrom,variant.pos, (variant.pos + 1)):
         pos = variant.pos - read.pos - 1
-        if read.query_alignment_sequence[pos] == var:
-            reads[read.qname] = {}
-            reads[read.qname]['pos'] = pos
-            reads[read.qname]['var'] = var
-            reads[read.qname]['v_idx'] = i
-            # pdb.set_trace()
+        if pos >= 0:
+            try:
+                m = re.findall('(\d+\w)',read.cigarstring)
+            except:
+                pdb.set_trace()
+            for cig in m:
+                if cig[-1] == 'D':
+                    pos -= int(cig[:-1])
+            try:
+                read.query_alignment_sequence[pos]
+            except:
+                pdb.set_trace()
+                continue
+            if read.query_alignment_sequence[pos] == var:
+                reads[read.qname] = {}
+                reads[read.qname]['pos'] = pos
+                reads[read.qname]['var'] = var
+                reads[read.qname]['v_idx'] = i
+                # pdb.set_trace()
     i += 1
 bam_file.close()
 vcf_file.close()
