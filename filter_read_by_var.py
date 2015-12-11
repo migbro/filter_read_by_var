@@ -26,7 +26,14 @@ i = 0
 reads = {}
 var_objs = []
 var_flag = {}
+j = 1
+mod = 100
+err_ct = 0
 for variant in vcf_file.fetch():
+    if j % mod == 0:
+        sys.stderr.write('Processing variant ' + str(j) + ' in vcf file\n')
+    j += 1
+
     var_objs.append(variant)
     var_flag[i] = 0
     var = variant.alts[0]
@@ -39,13 +46,9 @@ for variant in vcf_file.fetch():
                 for cig in m:
                     if cig[-1] == 'D':
                         pos -= int(cig[:-1])
-            except:
-                pdb.set_trace()
-
-            try:
                 read.query_alignment_sequence[pos]
             except:
-                pdb.set_trace()
+                err_ct += 1
                 continue
             if read.query_alignment_sequence[pos] == var:
                 reads[read.qname] = {}
@@ -54,12 +57,14 @@ for variant in vcf_file.fetch():
                 reads[read.qname]['v_idx'] = i
                 # pdb.set_trace()
     i += 1
+sys.stderr.write(str(err_ct) + ' reads skipping in bam1 due to invalid cigar or positioning\n')
 bam_file.close()
 vcf_file.close()
 
 mmu_bam = pysam.AlignmentFile(args['<bam2>'], 'rb')
 j = 1
 mod = 10000000
+err_ct = 0
 for read in mmu_bam:
     if j % mod == 0:
         sys.stderr.write('At read ' + str(j) + ' in bam 2 file\n')
@@ -74,9 +79,12 @@ for read in mmu_bam:
         if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
             var_flag[reads[read.qname]['v_idx']] += 1
     except:
-        sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
+        # sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
+        err_ct += 1
         continue
 mmu_bam.close()
+sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning'
+                               'n')
 out = open(args['<out>'], 'w')
 for index in var_flag:
     if var_flag[index] > 0:
