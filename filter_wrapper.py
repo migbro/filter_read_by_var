@@ -18,7 +18,7 @@ from docopt import docopt
 sys.path.append('/home/ubuntu/TOOLS/Scripts/utility')
 from job_manager import job_manager
 th = 8
-filter_py = '/home/ubuntu/TOOLS/filter_by_var/filter_read_by_var.py'
+filter_py = '/home/ubuntu/TOOLS/filter_read_by_var/filter_read_by_var.py'
 
 args = docopt(__doc__)
 bam1 = args['<bam1>']
