@@ -81,7 +81,7 @@ for read in mmu_bam:
         if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
             index = reads[read.qname]['v_idx']
             if index not in var_flag:
-                var_flag[index] = []
+                var_flag[index] = {}
                 # store corresponding mouse info
                 var_flag[index]['chr'] = mmu_bam.getrname(read.tid)
                 var_flag[index]['pos'] = read.pos + cur_pos
@@ -89,7 +89,7 @@ for read in mmu_bam:
                 var_flag[index]['r2'] = 0
                 var_flag[index]['paired'] = 0
                 var_flag[index]['var'] = 0
-            var_flag[index] += 1
+            var_flag[index]['var'] += 1
             if read.is_read1:
                 var_flag[index]['r1'] += 1
             else:
