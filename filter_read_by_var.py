@@ -12,10 +12,10 @@ Options:
 -h
 
 '''
-import pdb
-import pysam
 import re
 import sys
+
+import pysam
 from docopt import docopt
 
 args = docopt(__doc__)
@@ -24,7 +24,9 @@ bam_file = pysam.AlignmentFile(args['<bam1>'], 'rb')
 vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
 i = 0
 reads = {}
+# store all variant objects
 var_objs = []
+# flag whether variant found in mouse
 var_flag = {}
 j = 1
 mod = 100
@@ -35,7 +37,7 @@ for variant in vcf_file.fetch():
     j += 1
 
     var_objs.append(variant)
-    var_flag[i] = 0
+
     var = variant.alts[0]
     #    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
     for read in bam_file.fetch(variant.chrom, variant.pos, (variant.pos + 1)):
@@ -77,17 +79,35 @@ for read in mmu_bam:
             if cig[-1] == 'D':
                 cur_pos -= int(cig[:-1])
         if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
-            var_flag[reads[read.qname]['v_idx']] += 1
+            index = reads[read.qname]['v_idx']
+            if index not in var_flag:
+                var_flag[index] = []
+                # store corresponding mouse info
+                var_flag[index]['chr'] = mmu_bam.getrname(read.tid)
+                var_flag[index]['pos'] = read.pos + cur_pos
+                var_flag[index]['r1'] = 0
+                var_flag[index]['r2'] = 0
+                var_flag[index]['paired'] = 0
+                var_flag[index]['var'] = 0
+            var_flag[index] += 1
+            if read.is_read1:
+                var_flag[index]['mmu']['r1'] += 1
+            else:
+                var_flag[index]['mmu']['r2'] += 1
+            if read.is_paired:
+                var_flag[index]['mmu']['paired'] += 1
+
+
     except:
         # sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
         err_ct += 1
         continue
 mmu_bam.close()
-sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning'
-                               'n')
+sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning\n')
 out = open(args['<out>'], 'w')
 for index in var_flag:
-    if var_flag[index] > 0:
-        out.write('\t'.join(
-                (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref, var_objs[index].alts[0])) +'\t' +  str(
-                var_flag[index]) + '\n')
+    out.write('\t'.join(
+            (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
+             var_objs[index].alts[0])) + '\t' + '\t'.join(str(
+            var_flag[index]['var']), var_flag[index]['chr'], var_flag[index]['pos'], var_flag[index]['r1'],
+            var_flag[index]['r2'], var_flag[index]['paired']) + '\n')
