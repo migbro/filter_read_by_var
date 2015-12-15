@@ -91,11 +91,11 @@ for read in mmu_bam:
                 var_flag[index]['var'] = 0
             var_flag[index] += 1
             if read.is_read1:
-                var_flag[index]['mmu']['r1'] += 1
+                var_flag[index]['r1'] += 1
             else:
-                var_flag[index]['mmu']['r2'] += 1
+                var_flag[index]['r2'] += 1
             if read.is_paired:
-                var_flag[index]['mmu']['paired'] += 1
+                var_flag[index]['paired'] += 1
 
 
     except:
@@ -108,6 +108,7 @@ out = open(args['<out>'], 'w')
 for index in var_flag:
     out.write('\t'.join(
             (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
-             var_objs[index].alts[0])) + '\t' + '\t'.join(str(
-            var_flag[index]['var']), var_flag[index]['chr'], var_flag[index]['pos'], var_flag[index]['r1'],
-            var_flag[index]['r2'], var_flag[index]['paired']) + '\n')
+             var_objs[index].alts[0])) + '\t' + '\t'.join((str(var_flag[index]['var']), var_flag[index]['chr'],
+                                                           str(var_flag[index]['pos']), str(var_flag[index]['r1']),
+                                                           str(var_flag[index]['r2']),
+                                                           str(var_flag[index]['paired']))) + '\n')
