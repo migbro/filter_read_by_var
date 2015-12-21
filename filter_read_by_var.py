@@ -82,14 +82,14 @@ pysam.index(mmu_filtered)
 # pdb.set_trace()
 mmu_bam.close()
 mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
-sys.stderr.write('Indexing filtered reads\n')
-mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 1)
-mmu_subset_bai.build
-for read in reads:
+# sys.stderr.write('Indexing filtered reads\n')
+# mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 1)
+# mmu_subset_bai.build
+for read in mmu_subset_bam.fetch():
+    pdb.set_trace()
     try:
         # make same adjustment above for deletion
-        qset = mmu_subset_bai.find(read)
-        pdb.set_trace()
+
         cur_pos = reads[read.qname]['pos']
         m = re.findall('(\d+\w)', read.cigarstring)
         for cig in m:
