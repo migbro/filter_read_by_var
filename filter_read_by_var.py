@@ -56,7 +56,7 @@ for variant in vcf_file.fetch():
             if read.query_alignment_sequence[pos] == var:
                 reads[read.qname] = {}
                 reads[read.qname]['pos'] = pos
-                read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), variant.pos)) + '\n')
+                read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), str(variant.pos))) + '\n')
                 reads[read.qname]['var'] = var
                 reads[read.qname]['v_idx'] = i
                 # pdb.set_trace()
@@ -83,7 +83,7 @@ out.close()
 sys.stderr.write('Creating filtered reads bam index\n')
 pysam.index(mmu_filtered)
 # pdb.set_trace()
-mmu_bam.close()
+
 mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 # sys.stderr.write('Indexing filtered reads\n')
 # mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 1)
@@ -122,7 +122,7 @@ for read in mmu_subset_bam.fetch():
         # sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
         err_ct += 1
         continue
-
+mmu_bam.close()
 sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning\n')
 out = open(args['<out>'], 'w')
 for index in var_flag:
