@@ -68,7 +68,7 @@ j = 1
 mod = 10000000
 err_ct = 0
 # two passes - one to print a bam with just reads, another index and then process by read
-out = pysam.AlignmentFile('relevant_reads.bam', 'wh', header = mmu_bam.header)
+out = pysam.AlignmentFile('relevant_reads.bam', 'whb', header=mmu_bam.header)
 for read in mmu_bam:
     if j % mod == 0:
         sys.stderr.write('At read ' + str(j) + ' in bam 2 file\n')
