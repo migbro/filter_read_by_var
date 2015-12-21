@@ -68,13 +68,15 @@ j = 1
 mod = 10000000
 err_ct = 0
 # two passes - one to print a bam with just reads, another index and then process by read
-out = pysam.AlignmentFile('relevant_reads.bam', 'wb', template=mmu_bam)
+mmu_filtered = 'relevant_reads.bam'
+out = pysam.AlignmentFile(mmu_filtered, 'wb', template=mmu_bam)
 for read in mmu_bam:
     if j % mod == 0:
         sys.stderr.write('At read ' + str(j) + ' in bam 2 file\n')
     j += 1
     if read.qname in reads:
         out.write(read)
+pysam.index(mmu_filtered)
 #     try:
 #         # make same adjustment above for deletion
 #         cur_pos = reads[read.qname]['pos']
