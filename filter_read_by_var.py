@@ -14,7 +14,7 @@ Options:
 '''
 import re
 import sys
-
+import pdb
 import pysam
 from docopt import docopt
 
@@ -76,7 +76,14 @@ for read in mmu_bam:
     j += 1
     if read.qname in reads:
         out.write(read)
-pysam.index(mmu_filtered)
+sys.stderr.write('Creating filtered reads bam index\n')
+filtered_index = pysam.index(mmu_filtered)
+pdb.set_Trace()
+mmu_bam.close()
+mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
+sys.stderr.write('Indexing filtered reads\n')
+mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 0)
+
 #     try:
 #         # make same adjustment above for deletion
 #         cur_pos = reads[read.qname]['pos']
