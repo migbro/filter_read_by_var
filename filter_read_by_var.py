@@ -76,9 +76,10 @@ for read in mmu_bam:
     j += 1
     if read.qname in reads:
         out.write(read)
+out.close()
 sys.stderr.write('Creating filtered reads bam index\n')
-filtered_index = pysam.index(mmu_filtered)
-pdb.set_Trace()
+pysam.index(mmu_filtered)
+pdb.set_trace()
 mmu_bam.close()
 mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 sys.stderr.write('Indexing filtered reads\n')
@@ -115,8 +116,7 @@ mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 0)
 #         # sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
 #         err_ct += 1
 #         continue
-mmu_bam.close()
-out.close()
+
 # sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning\n')
 # out = open(args['<out>'], 'w')
 # for index in var_flag:
