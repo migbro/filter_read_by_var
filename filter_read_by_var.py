@@ -22,6 +22,8 @@ args = docopt(__doc__)
 
 bam_file = pysam.AlignmentFile(args['<bam1>'], 'rb')
 vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
+# output reads hitting variant in file
+read_out = open('var_read_hits.txt', 'w')
 i = 0
 reads = {}
 # store all variant objects
@@ -39,7 +41,6 @@ for variant in vcf_file.fetch():
     var_objs.append(variant)
 
     var = variant.alts[0]
-    #    for read in bam_file.fetch(variant.chrom, (variant.pos - 100), (variant.pos + 100)):
     for read in bam_file.fetch(variant.chrom, variant.pos, (variant.pos + 1)):
         pos = variant.pos - read.pos - 1
         if pos >= 0:
@@ -55,6 +56,7 @@ for variant in vcf_file.fetch():
             if read.query_alignment_sequence[pos] == var:
                 reads[read.qname] = {}
                 reads[read.qname]['pos'] = pos
+                read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), variant.pos)) + '\n')
                 reads[read.qname]['var'] = var
                 reads[read.qname]['v_idx'] = i
                 # pdb.set_trace()
@@ -62,6 +64,7 @@ for variant in vcf_file.fetch():
 sys.stderr.write(str(err_ct) + ' reads skipping in bam1 due to invalid cigar or positioning\n')
 bam_file.close()
 vcf_file.close()
+read_out.close()
 
 mmu_bam = pysam.AlignmentFile(args['<bam2>'], 'rb')
 j = 1
@@ -86,7 +89,7 @@ mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 # mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 1)
 # mmu_subset_bai.build
 for read in mmu_subset_bam.fetch():
-    pdb.set_trace()
+#    pdb.set_trace()
     try:
         # make same adjustment above for deletion
 
@@ -109,7 +112,7 @@ for read in mmu_subset_bam.fetch():
             var_flag[index]['var'] += 1
             if read.is_read1:
                 var_flag[index]['r1'] += 1
-            else:
+            elif read.is_read2:
                 var_flag[index]['r2'] += 1
             if read.is_paired:
                 var_flag[index]['paired'] += 1
