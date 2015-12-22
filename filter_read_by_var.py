@@ -14,7 +14,7 @@ Options:
 '''
 import re
 import sys
-import pdb
+
 import pysam
 from docopt import docopt
 
@@ -48,7 +48,7 @@ def mutect_check(read_obj, align_file, skip_dict):
         if not read_obj.is_proper_pair:
             sys.stderr.write('Not a proper pair!\n')
 
-        if float(clip)/slen < frac and read_obj.mapping_quality > 0:
+        if float(clip) / slen < frac and read_obj.mapping_quality > 0:
             if read_obj.has_tag('MD'):
                 mm = re.findall('(\d+\w)', read_obj.get_tag('MD'))
                 rqual = 0
@@ -66,12 +66,16 @@ def mutect_check(read_obj, align_file, skip_dict):
                     rqual += read_obj.query_alignment_qualities[pos]
                     cur = pos + 1
                 if rqual > 100:
-                    #pdb.set_trace()
+                    # pdb.set_trace()
                     sys.stderr.write('Sum quality of mismatches too high, skipping\n')
                     return skip_dict, 0
             if abs(read_obj.tlen) < 202:
                 align_obj = pysam.AlignmentFile(align_file, 'rb')
-                test = align_obj.mate(read_obj)
+                try:
+                    test = align_obj.mate(read_obj)
+                except:
+                    sys.stderr.write('Whammy!\n')
+                    return skip_dict, 0
                 if test.mapping_quality > read_obj.mapping_quality:
                     align_obj.close()
                     return skip_dict, 0
@@ -88,7 +92,8 @@ def mutect_check(read_obj, align_file, skip_dict):
         sys.stderr.write('Error!\n')
         return skip_dict, 0
 
-hsa_file = pysam.AlignmentFile(args['<bam1>'])
+
+hsa_file = args['<bam1>']
 bam_file = pysam.AlignmentFile(hsa_file, 'rb')
 vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
 # output reads hitting variant in file
@@ -120,7 +125,6 @@ for variant in vcf_file.fetch():
                 for cig in m:
                     if cig[-1] == 'D':
                         pos -= int(cig[:-1])
-                read.query_alignment_sequence[pos]
             except:
                 err_ct += 1
                 continue
@@ -164,7 +168,7 @@ mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 # mmu_subset_bai = pysam.IndexedReads(mmu_subset_bam, 1)
 # mmu_subset_bai.build
 for read in mmu_subset_bam.fetch():
-#    pdb.set_trace()
+    #    pdb.set_trace()
     try:
         # make same adjustment above for deletion
 
