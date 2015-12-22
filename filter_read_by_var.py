@@ -20,21 +20,8 @@ from docopt import docopt
 
 args = docopt(__doc__)
 
-bam_file = pysam.AlignmentFile(args['<bam1>'], 'rb')
-vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
-# output reads hitting variant in file
-read_out = open('var_read_hits.txt', 'w')
-i = 0
-reads = {}
-# store all variant objects
-var_objs = []
-# flag whether variant found in mouse
-var_flag = {}
-j = 1
-mod = 100
-err_ct = 0
 
-def mutect_check(read_obj, align_obj, skip_dict):
+def mutect_check(read_obj, align_file, skip_dict):
     frac = 0.3
     if read_obj.qname in skip_dict:
         return skip_dict, 0
@@ -83,11 +70,14 @@ def mutect_check(read_obj, align_obj, skip_dict):
                     sys.stderr.write('Sum quality of mismatches too high, skipping\n')
                     return skip_dict, 0
             if abs(read_obj.tlen) < 202:
+                align_obj = pysam.AlignmentFile(align_file, 'rb')
                 test = align_obj.mate(read_obj)
                 if test.mapping_quality > read_obj.mapping_quality:
+                    align_obj.close()
                     return skip_dict, 0
                 else:
                     skip_dict[test.qname] = 1
+                    align_obj.close()
                     return skip_dict, 1
 
             else:
@@ -97,6 +87,21 @@ def mutect_check(read_obj, align_obj, skip_dict):
         # pdb.set_trace()
         sys.stderr.write('Error!\n')
         return skip_dict, 0
+
+hsa_file = pysam.AlignmentFile(args['<bam1>'])
+bam_file = pysam.AlignmentFile(hsa_file, 'rb')
+vcf_file = pysam.VariantFile(args['<vcf>'], 'r')
+# output reads hitting variant in file
+read_out = open('var_read_hits.txt', 'w')
+i = 0
+reads = {}
+# store all variant objects
+var_objs = []
+# flag whether variant found in mouse
+var_flag = {}
+j = 1
+mod = 100
+err_ct = 0
 
 to_skip = {}
 for variant in vcf_file.fetch():
@@ -122,7 +127,7 @@ for variant in vcf_file.fetch():
             # first check that read matches variant, then if it'd pass mutect filters
             if read.query_alignment_sequence[pos] == var:
                 flag = 0
-                (to_skip, flag) = mutect_check(read, bam_file, to_skip)
+                (to_skip, flag) = mutect_check(read, hsa_file, to_skip)
                 if flag == 1:
                     reads[read.qname] = {}
                     reads[read.qname]['pos'] = pos
