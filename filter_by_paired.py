@@ -18,7 +18,7 @@ from docopt import docopt
 args = docopt(__doc__)
 hsa_file = args['<bam1>']
 bam_file = pysam.AlignmentFile(hsa_file, 'rb')
-out_filtered = 'paired_only.bam'
+out_filtered = args['<out>']
 out = pysam.AlignmentFile(out_filtered, 'wb', template=bam_file)
 pair_err = 0
 cig_err = 0
@@ -33,5 +33,5 @@ for read in bam_file:
         pair_err +=1
 out.close()
 bam_file.close()
-pysam.index(out)
+pysam.index(out_filtered)
 sys.stderr.write(str(pair_err) + ' unpaired reads, ' + str(cig_err) + ' missing cigar string\n')
