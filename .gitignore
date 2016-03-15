@@ -26,6 +26,8 @@ var/
 .installed.cfg
 *.egg
 .idea/
+/pitt_fitz_pysam.py
+/ase2.py
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

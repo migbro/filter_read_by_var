@@ -22,17 +22,21 @@ args = docopt(__doc__)
 
 
 def mutect_check(read_obj, align_file, skip_dict):
+    # set some constants here for determining read and base quality
     frac = 0.3
+    mapq_min = 50
+    baseq_min = 25
+
     if read_obj.qname in skip_dict:
         return skip_dict, 0
     try:
         slen = 0
         clip = 0
-        ins = []
-        ins_size = []
         clip_pos = []
         clip_size = []
         m = re.findall('(\d+\w)', read_obj.cigarstring)
+        mapq = read.mapq
+        baseq = ord(read_obj.qual[offset]) - 33
         for cig in m:
             slen += int(cig[:-1])
             # need to track number of bases clipped AND move backwards of clipped
@@ -42,33 +46,8 @@ def mutect_check(read_obj, align_file, skip_dict):
                 clip_size.append(int(cig[:-1]))
 
             # need to move position later if there's an insertion forward
-            if cig[-1] == 'I':
-                ins.append(slen)
-                ins_size.append(int(cig[:-1]))
-        if not read_obj.is_proper_pair:
-            sys.stderr.write('Not a proper pair!\n')
 
-        if float(clip) / slen < frac and read_obj.mapping_quality > 0:
-            if read_obj.has_tag('MD'):
-                mm = re.findall('(\d+\w)', read_obj.get_tag('MD'))
-                rqual = 0
-                cur = 0
-                for md in mm:
-                    pos = cur + int(md[:-1])
-                    for i in xrange(0, len(clip_pos), 1):
-                        if pos > clip_pos[i]:
-                            pos -= clip_size[i]
-                            break
-                    for i in xrange(0, len(ins), 1):
-                        if pos > ins[i]:
-                            pos += ins_size[i]
-                            break
-                    rqual += read_obj.query_alignment_qualities[pos]
-                    cur = pos + 1
-                if rqual > 100:
-                    # pdb.set_trace()
-                    sys.stderr.write('Sum quality of mismatches too high, skipping\n')
-                    return skip_dict, 0
+        if float(clip) / slen < frac and mapq >= mapq_min and baseq >= baseq_min:
             if abs(read_obj.tlen) < 202:
                 align_obj = pysam.AlignmentFile(align_file, 'rb')
                 try:
@@ -118,18 +97,11 @@ for variant in vcf_file.fetch():
 
     var = variant.alts[0]
     for read in bam_file.fetch(variant.chrom, variant.pos, (variant.pos + 1)):
-        pos = variant.pos - read.pos - 1
-        if pos >= 0 and read.is_proper_pair:
-            try:
-                m = re.findall('(\d+\w)', read.cigarstring)
-                for cig in m:
-                    if cig[-1] == 'D':
-                        pos -= int(cig[:-1])
-            except:
-                err_ct += 1
-                continue
-            # first check that read matches variant, then if it'd pass mutect filters
-            if read.query_alignment_sequence[pos] == var:
+        pos = variant.pos - 1
+        if read.is_proper_pair:
+            # first check that read matches variant, then if it'd pass mutect filters.  Some adapted from metalfox
+            offset = [item for item in read.aligned_pairs if item[1] == pos][0][0]
+            if offset is not None and read.seq[offset] == var:
                 flag = 0
                 (to_skip, flag) = mutect_check(read, hsa_file, to_skip)
                 if flag == 1:
