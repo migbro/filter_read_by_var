@@ -14,7 +14,7 @@ Options:
 '''
 import re
 import sys
-
+import pdb
 import pysam
 from docopt import docopt
 
@@ -26,7 +26,7 @@ def mutect_check(read_obj, align_file, skip_dict):
     frac = 0.3
     mapq_min = 50
     baseq_min = 25
-
+    # pdb.set_trace()
     if read_obj.qname in skip_dict:
         return skip_dict, 0
     try:
@@ -47,7 +47,7 @@ def mutect_check(read_obj, align_file, skip_dict):
 
             # need to move position later if there's an insertion forward
 
-        if float(clip) / slen < frac and mapq >= mapq_min and baseq >= baseq_min:
+        if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if abs(read_obj.tlen) < 202:
                 align_obj = pysam.AlignmentFile(align_file, 'rb')
                 try:
@@ -66,6 +66,8 @@ def mutect_check(read_obj, align_file, skip_dict):
             else:
                 skip_dict[read_obj.qname] = 1
                 return skip_dict, 1
+        else:
+            return skip_dict, 0
     except:
         # pdb.set_trace()
         sys.stderr.write('Error!\n')
@@ -100,10 +102,18 @@ for variant in vcf_file.fetch():
         pos = variant.pos - 1
         if read.is_proper_pair:
             # first check that read matches variant, then if it'd pass mutect filters.  Some adapted from metalfox
-            offset = [item for item in read.aligned_pairs if item[1] == pos][0][0]
+            try:
+                offset = [item for item in read.aligned_pairs if item[1] == pos][0][0]
+            except:
+                #sys.stderr.write('Offsides! On number ' + str(j) + '\n')
+                continue
             if offset is not None and read.seq[offset] == var:
                 flag = 0
-                (to_skip, flag) = mutect_check(read, hsa_file, to_skip)
+                try:
+                    (to_skip, flag) = mutect_check(read, hsa_file, to_skip)
+                except:
+                    sys.stderr.write('Stuck at line ' + str(j) + '\n')
+                    pdb.set_trace()
                 if flag == 1:
                     reads[read.qname] = {}
                     reads[read.qname]['pos'] = pos
