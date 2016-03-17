@@ -32,18 +32,14 @@ def mutect_check(read_obj, align_file, skip_dict):
     try:
         slen = 0
         clip = 0
-        clip_pos = []
-        clip_size = []
         m = re.findall('(\d+\w)', read_obj.cigarstring)
-        mapq = read.mapq
+        mapq = read_obj.mapq
         baseq = ord(read_obj.qual[offset]) - 33
         for cig in m:
             slen += int(cig[:-1])
             # need to track number of bases clipped AND move backwards of clipped
             if cig[-1] == 'S' or cig[-1] == 'H':
                 clip += int(cig[:-1])
-                clip_pos.append(slen)
-                clip_size.append(int(cig[:-1]))
 
             # need to move position later if there's an insertion forward
 
@@ -116,7 +112,7 @@ for variant in vcf_file.fetch():
                     pdb.set_trace()
                 if flag == 1:
                     reads[read.qname] = {}
-                    reads[read.qname]['pos'] = pos
+                    reads[read.qname]['pos'] = offset
                     read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), str(variant.pos))) + '\n')
                     reads[read.qname]['var'] = var
                     reads[read.qname]['v_idx'] = i
@@ -155,28 +151,46 @@ for read in mmu_subset_bam.fetch():
         # make same adjustment above for deletion
 
         cur_pos = reads[read.qname]['pos']
+        clip = 0
+        frac = 0.3
+        slen = 0
+        mapq_min = 50
+        baseq_min = 25
+
+        # hold read to same standards as variant calling
         m = re.findall('(\d+\w)', read.cigarstring)
+        mapq = read.mapq
+        baseq = ord(read.qual[offset]) - 33
         for cig in m:
+            slen += int(cig[:-1])
             if cig[-1] == 'D':
                 cur_pos -= int(cig[:-1])
-        if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
-            index = reads[read.qname]['v_idx']
-            if index not in var_flag:
-                var_flag[index] = {}
-                # store corresponding mouse info
-                var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
-                var_flag[index]['pos'] = read.pos + cur_pos
-                var_flag[index]['r1'] = 0
-                var_flag[index]['r2'] = 0
-                var_flag[index]['paired'] = 0
-                var_flag[index]['var'] = 0
-            var_flag[index]['var'] += 1
-            if read.is_read1:
-                var_flag[index]['r1'] += 1
-            elif read.is_read2:
-                var_flag[index]['r2'] += 1
-            if read.is_paired:
-                var_flag[index]['paired'] += 1
+
+            # need to track number of bases clipped AND move backwards of clipped
+            if cig[-1] == 'S' or cig[-1] == 'H':
+                clip += int(cig[:-1])
+
+            # need to move position later if there's an insertion forward
+
+        if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
+            if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
+                index = reads[read.qname]['v_idx']
+                if index not in var_flag:
+                    var_flag[index] = {}
+                    # store corresponding mouse info
+                    var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
+                    var_flag[index]['pos'] = read.pos + cur_pos
+                    var_flag[index]['r1'] = 0
+                    var_flag[index]['r2'] = 0
+                    var_flag[index]['paired'] = 0
+                    var_flag[index]['var'] = 0
+                var_flag[index]['var'] += 1
+                if read.is_read1:
+                    var_flag[index]['r1'] += 1
+                elif read.is_read2:
+                    var_flag[index]['r2'] += 1
+                if read.is_paired:
+                    var_flag[index]['paired'] += 1
 
 
     except:
