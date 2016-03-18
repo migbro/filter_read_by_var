@@ -24,7 +24,7 @@ args = docopt(__doc__)
 def mutect_check(read_obj, align_file, skip_dict):
     # set some constants here for determining read and base quality
     frac = 0.3
-    mapq_min = 50
+    mapq_min = 20
     baseq_min = 25
     # pdb.set_trace()
     if read_obj.qname in skip_dict:
@@ -157,7 +157,7 @@ for read in mmu_subset_bam.fetch():
         clip = 0
         frac = 0.3
         slen = 0
-        mapq_min = 50
+        mapq_min = 20
         baseq_min = 25
 
         # hold read to same standards as variant calling
