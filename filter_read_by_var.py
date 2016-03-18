@@ -25,7 +25,7 @@ def mutect_check(read_obj, align_file, skip_dict):
     # set some constants here for determining read and base quality
     frac = 0.3
     mapq_min = 20
-    baseq_min = 25
+    baseq_min = 5
     # pdb.set_trace()
     if read_obj.qname in skip_dict:
         return skip_dict, 0
@@ -158,7 +158,7 @@ for read in mmu_subset_bam.fetch():
         frac = 0.3
         slen = 0
         mapq_min = 20
-        baseq_min = 25
+        baseq_min = 5
 
         # hold read to same standards as variant calling
         m = re.findall('(\d+\w)', read.cigarstring)
