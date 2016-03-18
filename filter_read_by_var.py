@@ -86,6 +86,8 @@ mod = 100
 err_ct = 0
 
 to_skip = {}
+var_bam_file = 'hsa_var_supporting_reads.bam'
+var_bam = pysam.AlignmentFile(var_bam_file, 'wb', template=bam_file)
 for variant in vcf_file.fetch():
     if j % mod == 0:
         sys.stderr.write('Processing variant ' + str(j) + ' in vcf file\n')
@@ -116,12 +118,16 @@ for variant in vcf_file.fetch():
                     read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), str(variant.pos))) + '\n')
                     reads[read.qname]['var'] = var
                     reads[read.qname]['v_idx'] = i
+                    var_bam.write(read)
                     # pdb.set_trace()
     i += 1
+
 sys.stderr.write(str(err_ct) + ' reads skipping in bam1 due to invalid cigar or positioning\n')
 bam_file.close()
 vcf_file.close()
 read_out.close()
+var_bam.close()
+pysam.index(var_bam_file)
 
 mmu_bam = pysam.AlignmentFile(args['<bam2>'], 'rb')
 j = 1
