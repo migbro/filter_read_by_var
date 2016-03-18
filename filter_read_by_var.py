@@ -163,18 +163,18 @@ for read in mmu_subset_bam.fetch():
         # hold read to same standards as variant calling
         m = re.findall('(\d+\w)', read.cigarstring)
         mapq = read.mapq
-        baseq = ord(read.qual[offset]) - 33
+        baseq = ord(read.qual[cur_pos]) - 33
         for cig in m:
             slen += int(cig[:-1])
-            if cig[-1] == 'D':
-                cur_pos -= int(cig[:-1])
-
             # need to track number of bases clipped AND move backwards of clipped
             if cig[-1] == 'S' or cig[-1] == 'H':
                 clip += int(cig[:-1])
-
-            # need to move position later if there's an insertion forward
-
+        # get mouse genome position
+        try:
+            gene_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][0]
+        except:
+                #sys.stderr.write('Offsides! On number ' + str(j) + '\n')
+            continue
         if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
                 index = reads[read.qname]['v_idx']
@@ -182,7 +182,7 @@ for read in mmu_subset_bam.fetch():
                     var_flag[index] = {}
                     # store corresponding mouse info
                     var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
-                    var_flag[index]['pos'] = read.pos + cur_pos
+                    var_flag[index]['pos'] = gene_pos
                     var_flag[index]['r1'] = 0
                     var_flag[index]['r2'] = 0
                     var_flag[index]['paired'] = 0
