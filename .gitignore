@@ -25,7 +25,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-.idea/
+/.idea
 /pitt_fitz_pysam.py
 /ase2.py
 

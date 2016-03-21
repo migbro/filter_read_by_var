@@ -45,6 +45,8 @@ def mutect_check(read_obj, align_file, skip_dict):
 
         if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if abs(read_obj.tlen) < 202:
+                # may want to reconsider this - overlapping read might not have variant in it
+                sys.stderr.write('Warning: paired read overlapped!\n')
                 align_obj = pysam.AlignmentFile(align_file, 'rb')
                 try:
                     test = align_obj.mate(read_obj)
