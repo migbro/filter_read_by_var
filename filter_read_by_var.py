@@ -12,9 +12,10 @@ Options:
 -h
 
 '''
+import pdb
 import re
 import sys
-import pdb
+
 import pysam
 from docopt import docopt
 
@@ -41,7 +42,7 @@ def mutect_check(read_obj, align_file, skip_dict):
             if cig[-1] == 'S' or cig[-1] == 'H':
                 clip += int(cig[:-1])
 
-            # need to move position later if there's an insertion forward
+                # need to move position later if there's an insertion forward
 
         if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if abs(read_obj.tlen) < 202:
@@ -105,7 +106,7 @@ for variant in vcf_file.fetch():
             try:
                 offset = [item for item in read.aligned_pairs if item[1] == pos][0][0]
             except:
-                #sys.stderr.write('Offsides! On number ' + str(j) + '\n')
+                # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
                 continue
             if offset is not None and read.seq[offset] == var:
                 flag = 0
@@ -174,8 +175,9 @@ for read in mmu_subset_bam.fetch():
         # get mouse genome position
         try:
             gene_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][0]
+            chrom_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][1]
         except:
-                #sys.stderr.write('Offsides! On number ' + str(j) + '\n')
+            # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
             continue
         if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
@@ -205,10 +207,13 @@ for read in mmu_subset_bam.fetch():
 mmu_bam.close()
 sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or invalid positioning\n')
 out = open(args['<out>'], 'w')
+out.write(
+    'original chromosome\torig. position\tref base\talt base\tcount\tother species chrom\tposition\t' +
+    'forward read hits\treverse read hits\ttotal reads\n)')
 for index in var_flag:
     out.write('\t'.join(
-            (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
-             var_objs[index].alts[0])) + '\t' + '\t'.join((str(var_flag[index]['var']), var_flag[index]['chr'],
-                                                           str(var_flag[index]['pos']), str(var_flag[index]['r1']),
-                                                           str(var_flag[index]['r2']),
-                                                           str(var_flag[index]['paired']))) + '\n')
+        (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
+         var_objs[index].alts[0])) + '\t' + '\t'.join((str(var_flag[index]['var']), var_flag[index]['chr'],
+                                                       str(var_flag[index]['pos']), str(var_flag[index]['r1']),
+                                                       str(var_flag[index]['r2']),
+                                                       str(var_flag[index]['paired']))) + '\n')
