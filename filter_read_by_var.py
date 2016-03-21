@@ -48,23 +48,25 @@ def mutect_check(read_obj, align_file, skip_dict):
             if abs(read_obj.tlen) < 202:
                 # may want to reconsider this - overlapping read might not have variant in it
                 sys.stderr.write('Warning: paired read overlapped!\n')
-                align_obj = pysam.AlignmentFile(align_file, 'rb')
-                try:
-                    test = align_obj.mate(read_obj)
-                except:
-                    sys.stderr.write('Whammy!\n')
-                    return skip_dict, 0
-                if test.mapping_quality > read_obj.mapping_quality:
-                    align_obj.close()
-                    return skip_dict, 0
-                else:
-                    skip_dict[test.qname] = 1
-                    align_obj.close()
-                    return skip_dict, 1
-
-            else:
-                skip_dict[read_obj.qname] = 1
-                return skip_dict, 1
+            skip_dict[read_obj.qname] = 1
+            return skip_dict, 1
+            # align_obj = pysam.AlignmentFile(align_file, 'rb')
+            # try:
+            #     test = align_obj.mate(read_obj)
+            # except:
+            #     sys.stderr.write('Whammy!\n')
+            #     return skip_dict, 0
+            # if test.mapping_quality > read_obj.mapping_quality:
+            #     align_obj.close()
+            #     return skip_dict, 0
+            # else:
+            #     skip_dict[test.qname] = 1
+            #     align_obj.close()
+            #     return skip_dict, 1
+            #
+            # else:
+            #     skip_dict[read_obj.qname] = 1
+            #     return skip_dict, 1
         else:
             return skip_dict, 0
     except:
@@ -186,7 +188,7 @@ for read in mmu_subset_bam.fetch():
                     var_flag[index] = {}
                     # store corresponding mouse info
                     var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
-                    var_flag[index]['pos'] = gene_pos
+                    var_flag[index]['pos'] = chrom_pos
                     var_flag[index]['r1'] = 0
                     var_flag[index]['r2'] = 0
                     var_flag[index]['paired'] = 0
@@ -209,7 +211,7 @@ sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or inv
 out = open(args['<out>'], 'w')
 out.write(
     'original chromosome\torig. position\tref base\talt base\tcount\tother species chrom\tposition\t' +
-    'forward read hits\treverse read hits\ttotal reads\n)')
+    'forward read hits\treverse read hits\tnum reads paired\n)')
 for index in var_flag:
     out.write('\t'.join(
         (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
