@@ -25,7 +25,7 @@ args = docopt(__doc__)
 def mutect_check(read_obj, skip_dict):
     # set some constants here for determining read and base quality
     frac = 0.3
-    mapq_min = 0
+    mapq_min = 20
     baseq_min = 5
     if read_obj.qname in skip_dict:
         return skip_dict, 0
@@ -41,9 +41,7 @@ def mutect_check(read_obj, skip_dict):
             if cig[-1] == 'S' or cig[-1] == 'H':
                 clip += int(cig[:-1])
 
-                # need to move position later if there's an insertion forward
-
-        if (float(clip) / slen) < frac and mapq > mapq_min and baseq >= baseq_min:
+        if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
             if abs(read_obj.tlen) < 202:
                 # may want to reconsider this - overlapping read might not have variant in it
                 sys.stderr.write('Warning: paired read overlapped!\n')
@@ -108,7 +106,8 @@ for variant in vcf_file.fetch():
                     if read.qname not in reads:
                         reads[read.qname] = []
                     reads[read.qname].append({'pos': offset, 'var': var, 'v_idx': i})
-                    read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), str(variant.pos))) + '\n')
+                    read_out.write('\t'.join((read.qname, str(read.mapq), bam_file.getrname(read.tid),
+                                              str(variant.pos))) + '\n')
 
                     # won't write if already in skip dict
                     if to_skip[read.qname] <= 1:
@@ -148,7 +147,7 @@ for read in mmu_subset_bam.fetch():
             clip = 0
             frac = 0.3
             slen = 0
-            mapq_min = 0
+            mapq_min = 20
             baseq_min = 5
 
             # hold read to same standards as variant calling
@@ -167,7 +166,7 @@ for read in mmu_subset_bam.fetch():
             except:
                 # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
                 continue
-            if (float(clip) / slen) < frac and mapq > mapq_min and baseq >= baseq_min:
+            if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
                 if read.seq[cur_pos] == reads[read.qname][r_idx]['var']:
                     index = reads[read.qname]['v_idx']
                     if index not in var_flag:
