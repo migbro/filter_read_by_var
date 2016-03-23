@@ -139,11 +139,9 @@ for read in mmu_bam:
 out.close()
 sys.stderr.write('Creating filtered reads bam index\n')
 pysam.index(mmu_filtered)
-# pdb.set_trace()
 
 mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 for read in mmu_subset_bam.fetch():
-    #    pdb.set_trace()
     try:
         for r_idx in xrange(0, len(reads[read.qname]), 1):
             cur_pos = reads[read.qname][r_idx]['pos']
@@ -191,7 +189,7 @@ for read in mmu_subset_bam.fetch():
 
 
     except:
-        # sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
+        sys.stderr.write('Error at read ' + str(j) + ' skipping!\n')
         err_ct += 1
         continue
 mmu_bam.close()
