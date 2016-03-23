@@ -22,12 +22,11 @@ from docopt import docopt
 args = docopt(__doc__)
 
 
-def mutect_check(read_obj, align_file, skip_dict):
+def mutect_check(read_obj, skip_dict):
     # set some constants here for determining read and base quality
     frac = 0.3
     mapq_min = 20
     baseq_min = 5
-    # pdb.set_trace()
     if read_obj.qname in skip_dict:
         return skip_dict, 0
     try:
@@ -48,25 +47,11 @@ def mutect_check(read_obj, align_file, skip_dict):
             if abs(read_obj.tlen) < 202:
                 # may want to reconsider this - overlapping read might not have variant in it
                 sys.stderr.write('Warning: paired read overlapped!\n')
-            skip_dict[read_obj.qname] = 1
+            if read.qname not in skip_dict:
+                skip_dict[read_obj.qname] = 1
+            else:
+                skip_dict[read_obj.qname] += 1
             return skip_dict, 1
-            # align_obj = pysam.AlignmentFile(align_file, 'rb')
-            # try:
-            #     test = align_obj.mate(read_obj)
-            # except:
-            #     sys.stderr.write('Whammy!\n')
-            #     return skip_dict, 0
-            # if test.mapping_quality > read_obj.mapping_quality:
-            #     align_obj.close()
-            #     return skip_dict, 0
-            # else:
-            #     skip_dict[test.qname] = 1
-            #     align_obj.close()
-            #     return skip_dict, 1
-            #
-            # else:
-            #     skip_dict[read_obj.qname] = 1
-            #     return skip_dict, 1
         else:
             return skip_dict, 0
     except:
@@ -110,20 +95,24 @@ for variant in vcf_file.fetch():
             except:
                 # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
                 continue
+            # skip dict there in case a read has multiple mispappings and had already been accepted at some point
             if offset is not None and read.seq[offset] == var:
                 flag = 0
                 try:
-                    (to_skip, flag) = mutect_check(read, hsa_file, to_skip)
+                    (to_skip, flag) = mutect_check(read, to_skip)
                 except:
                     sys.stderr.write('Stuck at line ' + str(j) + '\n')
                     pdb.set_trace()
                 if flag == 1:
-                    reads[read.qname] = {}
-                    reads[read.qname]['pos'] = offset
+                    # lost of dicts since one read may carry more that one variant
+                    if read.qname not in reads:
+                        reads[read.qname] = []
+                    reads[read.qname].append({'pos': offset, 'var': var, 'v_idx': i})
                     read_out.write('\t'.join((read.qname, bam_file.getrname(read.tid), str(variant.pos))) + '\n')
-                    reads[read.qname]['var'] = var
-                    reads[read.qname]['v_idx'] = i
-                    var_bam.write(read)
+
+                    # won't write if already in skip dict
+                    if to_skip[read.qname] <= 1:
+                        var_bam.write(read)
                     # pdb.set_trace()
     i += 1
 
@@ -156,50 +145,49 @@ mmu_subset_bam = pysam.AlignmentFile(mmu_filtered, 'rb')
 for read in mmu_subset_bam.fetch():
     #    pdb.set_trace()
     try:
-        # make same adjustment above for deletion
+        for r_idx in xrange(0, len(reads[read.qname]), 1):
+            cur_pos = reads[read.qname][r_idx]['pos']
+            clip = 0
+            frac = 0.3
+            slen = 0
+            mapq_min = 20
+            baseq_min = 5
 
-        cur_pos = reads[read.qname]['pos']
-        clip = 0
-        frac = 0.3
-        slen = 0
-        mapq_min = 20
-        baseq_min = 5
-
-        # hold read to same standards as variant calling
-        m = re.findall('(\d+\w)', read.cigarstring)
-        mapq = read.mapq
-        baseq = ord(read.qual[cur_pos]) - 33
-        for cig in m:
-            slen += int(cig[:-1])
-            # need to track number of bases clipped AND move backwards of clipped
-            if cig[-1] == 'S' or cig[-1] == 'H':
-                clip += int(cig[:-1])
-        # get mouse genome position
-        try:
-            gene_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][0]
-            chrom_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][1]
-        except:
-            # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
-            continue
-        if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
-            if read.qname in reads and read.seq[cur_pos] == reads[read.qname]['var']:
-                index = reads[read.qname]['v_idx']
-                if index not in var_flag:
-                    var_flag[index] = {}
-                    # store corresponding mouse info
-                    var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
-                    var_flag[index]['pos'] = chrom_pos
-                    var_flag[index]['r1'] = 0
-                    var_flag[index]['r2'] = 0
-                    var_flag[index]['paired'] = 0
-                    var_flag[index]['var'] = 0
-                var_flag[index]['var'] += 1
-                if read.is_read1:
-                    var_flag[index]['r1'] += 1
-                elif read.is_read2:
-                    var_flag[index]['r2'] += 1
-                if read.is_paired:
-                    var_flag[index]['paired'] += 1
+            # hold read to same standards as variant calling
+            m = re.findall('(\d+\w)', read.cigarstring)
+            mapq = read.mapq
+            baseq = ord(read.qual[cur_pos]) - 33
+            for cig in m:
+                slen += int(cig[:-1])
+                # need to track number of bases clipped AND move backwards of clipped
+                if cig[-1] == 'S' or cig[-1] == 'H':
+                    clip += int(cig[:-1])
+            # get mouse genome position
+            try:
+                gene_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][0]
+                chrom_pos = [item for item in read.aligned_pairs if item[0] == cur_pos][0][1]
+            except:
+                # sys.stderr.write('Offsides! On number ' + str(j) + '\n')
+                continue
+            if (float(clip) / slen) < frac and mapq >= mapq_min and baseq >= baseq_min:
+                if read.seq[cur_pos] == reads[read.qname][r_idx]['var']:
+                    index = reads[read.qname]['v_idx']
+                    if index not in var_flag:
+                        var_flag[index] = {}
+                        # store corresponding mouse info
+                        var_flag[index]['chr'] = mmu_subset_bam.getrname(read.tid)
+                        var_flag[index]['pos'] = chrom_pos
+                        var_flag[index]['r1'] = 0
+                        var_flag[index]['r2'] = 0
+                        var_flag[index]['paired'] = 0
+                        var_flag[index]['var'] = 0
+                    var_flag[index]['var'] += 1
+                    if read.is_read1:
+                        var_flag[index]['r1'] += 1
+                    elif read.is_read2:
+                        var_flag[index]['r2'] += 1
+                    if read.is_paired:
+                        var_flag[index]['paired'] += 1
 
 
     except:
@@ -211,10 +199,10 @@ sys.stderr.write(str(err_ct) + ' mouse reads skipped due to missing cigar or inv
 out = open(args['<out>'], 'w')
 out.write(
     'original chromosome\torig. position\tref base\talt base\tcount\tother species chrom\tposition\t' +
-    'forward read hits\treverse read hits\tnum reads paired\n)')
+    'forward read hits\treverse read hits\tnum reads paired\n')
 for index in var_flag:
     out.write('\t'.join(
-        (var_objs[index].chrom, str(var_objs[index].pos), var_objs[index].ref,
+        (var_objs[index].chrom, str(var_objs[index].pos ), var_objs[index].ref,
          var_objs[index].alts[0])) + '\t' + '\t'.join((str(var_flag[index]['var']), var_flag[index]['chr'],
                                                        str(var_flag[index]['pos']), str(var_flag[index]['r1']),
                                                        str(var_flag[index]['r2']),
